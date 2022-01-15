@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -e
+set -a
+
+source ./config/postgres.env.pluto
+
+psql \
+  -f ./sql/sources/create_sources_table.sql \
+  -f ./sql/views/create_views_table.sql
+
