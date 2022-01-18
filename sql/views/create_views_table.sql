@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS data_manager.views (
   tiles_url           TEXT, -- tiles
   start_date          DATE,
   end_date            DATE,
-  last_updated        DATE,
+  last_updated        TIMESTAMP,
   statistics          JSONB
 ) ;
 
