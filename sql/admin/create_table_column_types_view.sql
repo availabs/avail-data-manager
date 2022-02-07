@@ -7,6 +7,7 @@ BEGIN ;
 
 CREATE SCHEMA IF NOT EXISTS _data_manager_admin ;
 
+--  DROP VIEW IF EXISTS _data_manager_admin.table_column_types CASCADE ;
 CREATE OR REPLACE VIEW _data_manager_admin.table_column_types
   AS
     SELECT
@@ -14,7 +15,8 @@ CREATE OR REPLACE VIEW _data_manager_admin.table_column_types
         a.relname::TEXT AS table_name,
         b.attname AS column_name,
         format_type(b.atttypid, b.atttypmod) AS column_type,
-        b.attnotnull AS column_not_null
+        b.attnotnull AS column_not_null,
+        b.attnum AS column_number
       FROM pg_catalog.pg_class AS a
         INNER JOIN pg_catalog.pg_attribute AS b
           ON (a.oid = b.attrelid)
@@ -25,6 +27,7 @@ CREATE OR REPLACE VIEW _data_manager_admin.table_column_types
       )
 ;
 
+--  DROP VIEW IF EXISTS _data_manager_admin.table_column_types_with_json_types CASCADE ;
 CREATE OR REPLACE VIEW _data_manager_admin.table_column_types_with_json_types
   AS
     SELECT
@@ -33,6 +36,7 @@ CREATE OR REPLACE VIEW _data_manager_admin.table_column_types_with_json_types
         column_name,
         column_type,
         column_not_null,
+        column_number,
 
         CASE
           WHEN ( is_array )
@@ -51,6 +55,7 @@ CREATE OR REPLACE VIEW _data_manager_admin.table_column_types_with_json_types
             a.column_name,
             a.column_type,
             a.column_not_null,
+            a.column_number,
 
             CASE
 
@@ -220,7 +225,7 @@ CREATE OR REPLACE VIEW _data_manager_admin.table_column_types_with_json_types
                                     'null'
                                   ),
                     '$comment',   regexp_replace(a.column_type, '\[\]$', '')
-
+                  )
             END AS item_type,
 
             ( a.column_type LIKE '%[]' ) AS is_array
@@ -233,6 +238,7 @@ CREATE OR REPLACE VIEW _data_manager_admin.table_column_types_with_json_types
       ) AS t
 ;
 
+--  DROP VIEW IF EXISTS _data_manager_admin.table_json_schema ;
 CREATE OR REPLACE VIEW _data_manager_admin.table_json_schema
   AS
     SELECT
@@ -248,7 +254,16 @@ CREATE OR REPLACE VIEW _data_manager_admin.table_json_schema
           'required',     json_agg(
                             column_name ORDER BY column_name
                           ) FILTER (WHERE column_not_null)
-          ) AS table_json_schema
+          ) AS table_json_schema,
+          jsonb_agg(
+            jsonb_build_object(
+              'name',     column_name,
+              'type',     json_type->'type',
+              'desc',     null
+            )
+            ORDER BY column_number
+          ) AS table_simplified_schema
+
       FROM _data_manager_admin.table_column_types_with_json_types
       GROUP BY table_schema, table_name
 ;
