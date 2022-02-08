@@ -258,7 +258,11 @@ CREATE OR REPLACE VIEW _data_manager_admin.table_json_schema
           jsonb_agg(
             jsonb_build_object(
               'name',     column_name,
-              'type',     json_type->'type',
+              'type',     CASE
+                            WHEN ( jsonb_typeof(json_type->'type') = 'array' )
+                              THEN '"object"'::JSONB
+                            ELSE json_type->'type'
+                          END,
               'desc',     null
             )
             ORDER BY column_number
